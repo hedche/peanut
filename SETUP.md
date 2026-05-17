@@ -20,7 +20,7 @@ If migrating from the reference app, copy its local environment file after the
 Peanut `.gitignore` exists:
 
 ```bash
-cp ~/dv/leafbit/ai-wedding-planner/.env.local .env.local
+cp /path/to/reference-assistant/.env.local .env.local
 git status --short --ignored .env.local
 ```
 

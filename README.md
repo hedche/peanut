@@ -65,7 +65,7 @@ Copy the local environment file from the reference app only after confirming
 `.gitignore` is present:
 
 ```bash
-cp ~/dv/leafbit/ai-wedding-planner/.env.local .env.local
+cp /path/to/reference-assistant/.env.local .env.local
 git status --short --ignored .env.local
 ```
 
