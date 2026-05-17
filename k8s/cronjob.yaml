@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: peanut-daily-briefing
+  namespace: peanut
+spec:
+  schedule: "30 8 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 300
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: peanut
+              image: hedche/peanut:latest
+              command: ["python", "-m", "app.run"]
+              envFrom:
+                - configMapRef:
+                    name: peanut-config
+                - secretRef:
+                    name: peanut-secrets
+              volumeMounts:
+                - name: memory
+                  mountPath: /data
+              resources:
+                requests:
+                  memory: 128Mi
+                  cpu: 50m
+                limits:
+                  memory: 512Mi
+                  cpu: 500m
+          volumes:
+            - name: memory
+              persistentVolumeClaim:
+                claimName: peanut-memory

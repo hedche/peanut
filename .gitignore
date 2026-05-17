@@ -1,0 +1,45 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python environments and packaging
+.venv/
+venv/
+ENV/
+dist/
+build/
+*.egg-info/
+
+# Test/build artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+secrets.yaml
+*.secret
+*.token
+*credentials*.json
+*oauth*.json
+
+# Local app state
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Kubernetes/local cluster credentials
+kubeconfig
+*kubeconfig*
+talosconfig
+*talosconfig*
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/

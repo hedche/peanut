@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: peanut
+  namespace: peanut
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: peanut
+  template:
+    metadata:
+      labels:
+        app: peanut
+    spec:
+      containers:
+        - name: peanut
+          image: hedche/peanut:latest
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: peanut-config
+            - secretRef:
+                name: peanut-secrets
+          volumeMounts:
+            - name: memory
+              mountPath: /data
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 50m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+      volumes:
+        - name: memory
+          persistentVolumeClaim:
+            claimName: peanut-memory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: peanut
+  namespace: peanut
+spec:
+  selector:
+    app: peanut
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  type: ClusterIP
