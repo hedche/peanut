@@ -38,6 +38,7 @@ async def generate_and_send_report() -> None:
                     "No tasks found on the board — nothing to report.",
                     settings.telegram_chat_id,
                     settings.telegram_bot_token,
+                    settings.telegram_message_log_path,
                 )
                 return
 
@@ -72,6 +73,7 @@ async def generate_and_send_report() -> None:
                 "Sorry, I ran into an error generating the report. Please try again later.",
                 settings.telegram_chat_id,
                 settings.telegram_bot_token,
+                settings.telegram_message_log_path,
             )
 
 
@@ -142,6 +144,7 @@ async def telegram_webhook(request: Request, background_tasks: BackgroundTasks) 
                 "Checking information. We'll get back to you in a sec!",
                 chat_id,
                 settings.telegram_bot_token,
+                settings.telegram_message_log_path,
             )
             # Queue report generation in background
             background_tasks.add_task(generate_and_send_report)

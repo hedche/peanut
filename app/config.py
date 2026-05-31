@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     telegram_bot_token: str
     telegram_chat_id: str
     telegram_webhook_url: str = ""  # e.g., https://your-domain.com/webhook/telegram
+    telegram_message_log_path: str = "/data/telegram_messages.jsonl"
 
     # Assistant behavior
     assistant_name: str = "Peanut"

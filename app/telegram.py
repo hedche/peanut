@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
 import logging
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import httpx
@@ -31,12 +34,22 @@ async def send_briefing(briefing: str, cfg: Settings) -> None:
             try:
                 resp = await client.post(url, json=payload)
                 resp.raise_for_status()
+                _append_sent_message(
+                    cfg.telegram_message_log_path,
+                    chunk,
+                    cfg.telegram_chat_id,
+                )
                 logger.info("Telegram message sent (%d chars)", len(chunk))
             except httpx.HTTPError:
                 logger.exception("Failed to send Telegram message")
 
 
-async def send_message(text: str, chat_id: str, bot_token: str) -> None:
+async def send_message(
+    text: str,
+    chat_id: str,
+    bot_token: str,
+    message_log_path: str,
+) -> None:
     """Send a plain text message to Telegram."""
     url = f"{TELEGRAM_API}/bot{bot_token}/sendMessage"
     async with httpx.AsyncClient(timeout=30) as client:
@@ -47,6 +60,7 @@ async def send_message(text: str, chat_id: str, bot_token: str) -> None:
         try:
             resp = await client.post(url, json=payload)
             resp.raise_for_status()
+            _append_sent_message(message_log_path, text, chat_id)
             logger.info("Telegram message sent (%d chars)", len(text))
         except httpx.HTTPError:
             logger.exception("Failed to send Telegram message")
@@ -89,3 +103,25 @@ def _split_message(text: str) -> list[str]:
         chunks.append(text[:split_at])
         text = text[split_at:].lstrip("\n")
     return chunks
+
+
+def _append_sent_message(
+    path: str,
+    text: str,
+    chat_id: str,
+    sent_at: datetime | None = None,
+) -> None:
+    try:
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        timestamp = sent_at or datetime.now(timezone.utc)
+        entry = {
+            "timestamp": timestamp.isoformat().replace("+00:00", "Z"),
+            "chat_id": chat_id,
+            "text": text,
+        }
+        with p.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False))
+            f.write("\n")
+    except OSError:
+        logger.exception("Failed to append Telegram message log")
