@@ -101,7 +101,22 @@ def _format_briefing(
     title: str = "Daily priorities",
     provider_name: str = "",
     assignee_priorities: list[AssigneePriorities] | None = None,
+    all_scored: list[ScoredTask] | None = None,
 ) -> str:
+    scored_lookup: dict[str, ScoredTask] = {}
+    if all_scored:
+        scored_lookup = {st.card.name.lower(): st for st in all_scored}
+
+    def _score_str(task_name: str) -> str:
+        st = scored_lookup.get(task_name.lower())
+        if not st:
+            return ""
+        bd = st.breakdown
+        return (
+            f" [{st.total}pts L:{bd.list_score} D:{bd.due_score}"
+            f" C:{bd.checklist_score} B:{bd.blocking_score}]"
+        )
+
     lines = [f"🥜 {title}"]
 
     if assignee_priorities:
@@ -109,14 +124,16 @@ def _format_briefing(
             lines.append(f"\n📋 {ap.assignee}:\n")
             for i, p in enumerate(ap.priorities, 1):
                 carryover_tag = " carry-over" if p.is_carryover else ""
-                lines.append(f"{i}. {p.task}{carryover_tag}")
-                lines.append(f"   → {p.reason}\n")
+                lines.append(
+                    f"{i}. {p.task}{_score_str(p.task)}{carryover_tag}"
+                )
     else:
         lines.append("\nTop priorities for today:\n")
         for i, p in enumerate(priorities, 1):
             carryover_tag = " carry-over" if p.is_carryover else ""
-            lines.append(f"{i}. {p.task}{carryover_tag}")
-            lines.append(f"   → {p.reason}\n")
+            lines.append(
+                f"{i}. {p.task}{_score_str(p.task)}{carryover_tag}"
+            )
     return "\n".join(lines)
 
 
@@ -254,6 +271,7 @@ async def plan_today(
         cfg.briefing_title,
         provider_name,
         assignee_priorities or None,
+        scored,
     )
 
     # Log summary
