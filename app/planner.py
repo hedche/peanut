@@ -123,16 +123,14 @@ def _format_briefing(
         for ap in assignee_priorities:
             lines.append(f"\n📋 {ap.assignee}:\n")
             for i, p in enumerate(ap.priorities, 1):
-                carryover_tag = " carry-over" if p.is_carryover else ""
                 lines.append(
-                    f"{i}. {p.task}{_score_str(p.task)}{carryover_tag}"
+                    f"{i}. {p.task}{_score_str(p.task)}"
                 )
     else:
         lines.append("\nTop priorities for today:\n")
         for i, p in enumerate(priorities, 1):
-            carryover_tag = " carry-over" if p.is_carryover else ""
             lines.append(
-                f"{i}. {p.task}{_score_str(p.task)}{carryover_tag}"
+                f"{i}. {p.task}{_score_str(p.task)}"
             )
     return "\n".join(lines)
 
