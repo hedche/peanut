@@ -29,7 +29,6 @@ async def send_briefing(briefing: str, cfg: Settings) -> None:
             payload = {
                 "chat_id": cfg.telegram_chat_id,
                 "text": chunk,
-                "parse_mode": "Markdown",
             }
             try:
                 resp = await client.post(url, json=payload)
