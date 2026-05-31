@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     trello_api_key: str
     trello_api_token: str
     trello_board_id: str
+    trello_list_name: str = ""
 
     # Google AI Studio (Gemini Developer API)
     google_api_key: str

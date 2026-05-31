@@ -80,9 +80,15 @@ async def get_cards_for_list(
 async def get_all_tasks(
     client: httpx.AsyncClient, cfg: Settings
 ) -> list[TrelloCard]:
-    """Fetch every open card across all lists on the board."""
+    """Fetch open cards from the configured board/list."""
     lists = await get_board_lists(client, cfg)
     logger.info("Found %d lists on board %s", len(lists), cfg.trello_board_id)
+
+    if cfg.trello_list_name:
+        lists = [lst for lst in lists if lst["name"] == cfg.trello_list_name]
+        if not lists:
+            raise RuntimeError(f"Trello list {cfg.trello_list_name!r} not found")
+        logger.info("Filtering Trello cards to list: %s", cfg.trello_list_name)
 
     all_cards: list[TrelloCard] = []
     for lst in lists:

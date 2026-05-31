@@ -82,6 +82,7 @@ Required provider variables:
 - `TRELLO_API_KEY`
 - `TRELLO_API_TOKEN`
 - `TRELLO_BOARD_ID`
+- `TRELLO_LIST_NAME` (optional; exact list name to read, blank reads all lists)
 - `GOOGLE_API_KEY`
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
