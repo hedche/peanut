@@ -63,6 +63,38 @@ When prioritising, consider:
 
 NO_EMAIL_CONTEXT = "Email access not configured — relying on Trello data only."
 
+EMAIL_QUERY_SYSTEM_PROMPT = (
+    "You are Peanut, a helpful email assistant. Review the user's unread and "
+    "important emails and identify which ones require replies, follow-ups, or "
+    "urgent action. Be concise — Telegram messages should be short. "
+    "For each email that needs attention, say: who it's from, the subject, "
+    "and what action is needed. Skip newsletters, notifications, and automated emails."
+)
+
+EMAIL_QUERY_USER_PROMPT = """\
+Here are my unread emails:
+{unread_block}
+
+Here are important sender emails:
+{important_block}
+
+Which of these require a reply or follow-up? List them in order of urgency.
+"""
+
+TASK_QUERY_SYSTEM_PROMPT = (
+    "You are Peanut, a helpful task assistant. Review the user's top-priority "
+    "Trello tasks and briefly explain what they should focus on today. "
+    "Be concise — one or two sentences per task. Mention due dates, blockers, "
+    "or coordination needs if relevant."
+)
+
+TASK_QUERY_USER_PROMPT = """\
+Here are my top tasks:
+{tasks_block}
+
+What should I focus on today? Give me a short, actionable summary.
+"""
+
 
 def _format_thread(thread: GmailThread) -> str:
     """Format a single email thread for the prompt."""

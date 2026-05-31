@@ -1,8 +1,18 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from enum import Enum
 
 from pydantic import BaseModel, Field
+
+
+class CommandIntent(str, Enum):
+    UPDATE = "update"
+    EMAILS = "emails"
+    TASKS = "tasks"
+    STATUS = "status"
+    HELP = "help"
+    UNKNOWN = "unknown"
 
 
 class TrelloCard(BaseModel):

@@ -48,14 +48,17 @@ async def send_message(
     chat_id: str,
     bot_token: str,
     message_log_path: str,
+    parse_mode: str = "",
 ) -> None:
     """Send a plain text message to Telegram."""
     url = f"{TELEGRAM_API}/bot{bot_token}/sendMessage"
     async with httpx.AsyncClient(timeout=30) as client:
-        payload = {
+        payload: dict[str, str] = {
             "chat_id": chat_id,
             "text": text,
         }
+        if parse_mode:
+            payload["parse_mode"] = parse_mode
         try:
             resp = await client.post(url, json=payload)
             resp.raise_for_status()
@@ -63,6 +66,20 @@ async def send_message(
             logger.info("Telegram message sent (%d chars)", len(text))
         except httpx.HTTPError:
             logger.exception("Failed to send Telegram message")
+
+
+async def send_markdown_message(
+    text: str,
+    chat_id: str,
+    bot_token: str,
+    message_log_path: str,
+) -> None:
+    """Send a Markdown-formatted message to Telegram."""
+    chunks = _split_message(text)
+    for chunk in chunks:
+        await send_message(
+            chunk, chat_id, bot_token, message_log_path, parse_mode="Markdown"
+        )
 
 
 async def set_webhook(url: str, bot_token: str) -> None:

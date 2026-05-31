@@ -49,5 +49,8 @@ class Settings(BaseSettings):
     gmail_refresh_token: str = ""
     gmail_sender_emails: str = ""
 
+    # Email query settings
+    top_emails_for_llm: int = 10  # Number of email threads to include in email query prompts
+
 
 settings = Settings()  # type: ignore[call-arg]

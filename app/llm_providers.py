@@ -42,18 +42,25 @@ class GeminiProvider:
         self.model = cfg.gemini_model
         self.cfg = cfg
 
-    async def generate(self, prompt: str) -> LLMResponse:
+    async def generate(
+        self,
+        prompt: str,
+        system_instruction: str | None = None,
+        response_mime_type: str = "application/json",
+    ) -> LLMResponse:
         response = self.client.models.generate_content(
             model=self.model,
             contents=prompt,
             config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
+                system_instruction=system_instruction or SYSTEM_PROMPT,
                 temperature=0.2,
-                response_mime_type="application/json",
+                response_mime_type=response_mime_type,
             ),
         )
         raw = response.text
-        return LLMResponse(raw_text=raw, parsed_json=json.loads(raw))
+        if response_mime_type == "application/json":
+            return LLMResponse(raw_text=raw, parsed_json=json.loads(raw))
+        return LLMResponse(raw_text=raw, parsed_json=[])
 
     def _is_retryable_error(self, exc: Exception) -> bool:
         """Check if an error is retryable (e.g., 429 rate limit, 503 service unavailable)."""
@@ -76,12 +83,17 @@ class MultiProviderLLM:
         logger.info("Gemini provider initialized (model: %s)", cfg.gemini_model)
 
     async def generate_with_fallback(
-        self, prompt: str
+        self,
+        prompt: str,
+        system_instruction: str | None = None,
+        response_mime_type: str = "application/json",
     ) -> tuple[LLMResponse, str, int]:
         """Generate with retry logic.
 
         Args:
             prompt: The prompt to send
+            system_instruction: Optional override for the system prompt
+            response_mime_type: MIME type for the response
 
         Returns:
             Tuple of (response, provider_name, total_retries)
@@ -89,12 +101,18 @@ class MultiProviderLLM:
         Raises:
             Exception: If generation fails after all retries
         """
-        response = await self._generate_with_retry(prompt)
+        response = await self._generate_with_retry(
+            prompt,
+            system_instruction=system_instruction,
+            response_mime_type=response_mime_type,
+        )
         return response, self.provider.name, 0
 
     async def _generate_with_retry(
         self,
         prompt: str,
+        system_instruction: str | None = None,
+        response_mime_type: str = "application/json",
     ) -> LLMResponse:
         """Generate with retry logic."""
         max_attempts = self.cfg.gemini_retry_max_attempts
@@ -105,7 +123,11 @@ class MultiProviderLLM:
         for attempt in range(1, max_attempts + 1):
             start_time = time.perf_counter()
             try:
-                response = await self.provider.generate(prompt)
+                response = await self.provider.generate(
+                    prompt,
+                    system_instruction=system_instruction,
+                    response_mime_type=response_mime_type,
+                )
                 latency_ms = (time.perf_counter() - start_time) * 1000
                 metrics.record_request(
                     self.provider.name,

@@ -47,3 +47,27 @@ async def test_send_message_appends_successful_send_to_log(tmp_path):
     assert entries[0]["chat_id"] == "123"
     assert entries[0]["text"] == "Checking information."
     assert entries[0]["timestamp"].endswith("Z")
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_send_markdown_message_uses_parse_mode_and_splits_long_text(tmp_path):
+    bot_token = "bot-token"
+    log_path = tmp_path / "telegram_messages.jsonl"
+    route = respx.post(f"{TELEGRAM_API}/bot{bot_token}/sendMessage").mock(
+        return_value=httpx.Response(200, json={"ok": True})
+    )
+
+    from app.telegram import send_markdown_message
+
+    await send_markdown_message(
+        "Hello *bold* text",
+        "123",
+        bot_token,
+        str(log_path),
+    )
+
+    assert route.called
+    request_body = json.loads(route.calls.last.request.content)
+    assert request_body["parse_mode"] == "Markdown"
+    assert "*bold*" in request_body["text"]

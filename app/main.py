@@ -8,6 +8,7 @@ from typing import AsyncIterator
 import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
 
+from app.commands import dispatch_command
 from app.config import settings
 from app.gmail import get_email_context
 from app.memory import load_memory, save_memory
@@ -121,15 +122,17 @@ async def metrics_json_endpoint() -> dict:
 
 
 @app.post("/webhook/telegram")
-async def telegram_webhook(request: Request, background_tasks: BackgroundTasks) -> dict[str, str]:
-    """Receive Telegram webhook updates and process 'update' command."""
+async def telegram_webhook(
+    request: Request, background_tasks: BackgroundTasks
+) -> dict[str, str]:
+    """Receive Telegram webhook updates and process commands."""
     try:
         data = await request.json()
         logger.debug("Received Telegram update: %s", data)
 
         # Extract message data
         message = data.get("message", {})
-        text = message.get("text", "").strip().lower()
+        text = message.get("text", "").strip()
         chat_id = str(message.get("chat", {}).get("id", ""))
 
         # Only respond to messages from the configured chat
@@ -137,17 +140,13 @@ async def telegram_webhook(request: Request, background_tasks: BackgroundTasks) 
             logger.warning("Ignoring message from unknown chat: %s", chat_id)
             return {"status": "ignored"}
 
-        # Process 'update' command
-        if text == "update":
-            # Send immediate acknowledgment
-            await send_message(
-                "Checking information. We'll get back to you in a sec!",
-                chat_id,
-                settings.telegram_bot_token,
-                settings.telegram_message_log_path,
-            )
-            # Queue report generation in background
-            background_tasks.add_task(generate_and_send_report)
+        # Route through command dispatcher
+        await dispatch_command(
+            text,
+            background_tasks,
+            settings,
+            client=app.state.http_client,
+        )
 
         return {"status": "ok"}
     except Exception:
