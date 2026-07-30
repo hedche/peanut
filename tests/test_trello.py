@@ -128,9 +128,10 @@ async def test_get_backlog_priority_cards_filters_sorts_and_truncates(monkeypatc
     monkeypatch.setattr(trello, "get_board_lists", get_board_lists)
     monkeypatch.setattr(trello, "get_cards_for_list", get_cards_for_list)
 
-    cards = await trello.get_backlog_priority_cards(None, _settings())
+    cards, label = await trello.get_backlog_priority_cards(None, _settings())
 
     assert [card.name for card in cards] == ["Soonest", "Middle", "Later"]
+    assert label == "P1"
 
 
 async def test_get_backlog_priority_cards_no_due_dates_sort_last(monkeypatch):
@@ -147,7 +148,7 @@ async def test_get_backlog_priority_cards_no_due_dates_sort_last(monkeypatch):
     monkeypatch.setattr(trello, "get_board_lists", get_board_lists)
     monkeypatch.setattr(trello, "get_cards_for_list", get_cards_for_list)
 
-    cards = await trello.get_backlog_priority_cards(None, _settings())
+    cards, _ = await trello.get_backlog_priority_cards(None, _settings())
 
     assert [card.name for card in cards] == [
         "Dated",
@@ -164,6 +165,64 @@ async def test_get_backlog_priority_cards_returns_empty_when_list_missing(
 
     monkeypatch.setattr(trello, "get_board_lists", get_board_lists)
 
-    cards = await trello.get_backlog_priority_cards(None, _settings())
+    cards, label = await trello.get_backlog_priority_cards(None, _settings())
 
     assert cards == []
+    assert label == "P1"
+
+
+async def test_get_backlog_priority_cards_falls_back_to_p2(monkeypatch):
+    async def get_board_lists(client, cfg):
+        return [{"id": "backlog", "name": "Backlog 📋"}]
+
+    async def get_cards_for_list(client, cfg, list_id, list_name):
+        return [
+            TrelloCard(id="1", name="Later P2", due=datetime(2026, 8, 9), labels=["p2"]),
+            TrelloCard(id="2", name="Soon P2", due=datetime(2026, 8, 3), labels=["P2"]),
+            TrelloCard(id="3", name="Unlabelled"),
+        ]
+
+    monkeypatch.setattr(trello, "get_board_lists", get_board_lists)
+    monkeypatch.setattr(trello, "get_cards_for_list", get_cards_for_list)
+
+    cards, label = await trello.get_backlog_priority_cards(None, _settings())
+
+    assert [card.name for card in cards] == ["Soon P2", "Later P2"]
+    assert label == "P2"
+
+
+async def test_get_backlog_priority_cards_prefers_p1_over_p2(monkeypatch):
+    async def get_board_lists(client, cfg):
+        return [{"id": "backlog", "name": "Backlog 📋"}]
+
+    async def get_cards_for_list(client, cfg, list_id, list_name):
+        return [
+            TrelloCard(id="1", name="A P2", due=datetime(2026, 8, 1), labels=["P2"]),
+            TrelloCard(id="2", name="A P1", due=datetime(2026, 8, 9), labels=["P1"]),
+        ]
+
+    monkeypatch.setattr(trello, "get_board_lists", get_board_lists)
+    monkeypatch.setattr(trello, "get_cards_for_list", get_cards_for_list)
+
+    cards, label = await trello.get_backlog_priority_cards(None, _settings())
+
+    assert [card.name for card in cards] == ["A P1"]
+    assert label == "P1"
+
+
+async def test_get_backlog_priority_cards_no_fallback_when_disabled(monkeypatch):
+    async def get_board_lists(client, cfg):
+        return [{"id": "backlog", "name": "Backlog 📋"}]
+
+    async def get_cards_for_list(client, cfg, list_id, list_name):
+        return [TrelloCard(id="1", name="A P2", labels=["P2"])]
+
+    monkeypatch.setattr(trello, "get_board_lists", get_board_lists)
+    monkeypatch.setattr(trello, "get_cards_for_list", get_cards_for_list)
+
+    cards, label = await trello.get_backlog_priority_cards(
+        None, _settings(backlog_fallback_label_name="")
+    )
+
+    assert cards == []
+    assert label == "P1"

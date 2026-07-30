@@ -61,7 +61,8 @@ class DailyReport(BaseModel):
     date: date
     top_priorities: list[PriorityItem]
     priorities_by_assignee: list[AssigneePriorities] = []
-    backlog_p1: list[TrelloCard] = []
+    backlog_cards: list[TrelloCard] = []
+    backlog_label: str = ""
     briefing: str = ""
     all_scored_tasks: list[ScoredTask] = []
     email_context: EmailContext | None = None

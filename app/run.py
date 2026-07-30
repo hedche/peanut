@@ -47,16 +47,23 @@ async def main() -> None:
         # 5. Fetch email context (optional)
         email_context = await get_email_context(client, settings)
 
-        # 5b. Fetch backlog P1 cards (optional — never blocks the briefing)
+        # 5b. Fetch backlog priority cards (optional — never blocks the briefing)
         try:
-            backlog_cards = await get_backlog_priority_cards(client, settings)
+            backlog_cards, backlog_label = await get_backlog_priority_cards(
+                client, settings
+            )
         except Exception as exc:
-            logger.warning("Failed to fetch backlog P1 cards: %s", exc)
-            backlog_cards = []
+            logger.warning("Failed to fetch backlog priority cards: %s", exc)
+            backlog_cards, backlog_label = [], settings.backlog_label_name
 
         # 6. Ask the LLM for today's priorities
         daily_report = await plan_today(
-            top_scored, memory, email_context, settings, backlog_cards=backlog_cards
+            top_scored,
+            memory,
+            email_context,
+            settings,
+            backlog_cards=backlog_cards,
+            backlog_label=backlog_label,
         )
 
         # 7. Save today's memory for tomorrow
