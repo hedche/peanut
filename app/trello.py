@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 
 import httpx
 
@@ -65,6 +66,11 @@ async def get_cards_for_list(
                 desc=raw.get("desc", ""),
                 due=raw.get("due"),
                 list_name=list_name,
+                labels=[
+                    label["name"]
+                    for label in raw.get("labels", [])
+                    if label.get("name")
+                ],
                 assigned_to=[
                     member.get("fullName") or member.get("username", "")
                     for member in raw.get("members", [])
@@ -75,6 +81,53 @@ async def get_cards_for_list(
             )
         )
     return cards
+
+
+async def get_backlog_priority_cards(
+    client: httpx.AsyncClient, cfg: Settings
+) -> list[TrelloCard]:
+    """Fetch the top backlog cards carrying the priority label.
+
+    Returns the first `backlog_top_n` cards from the backlog list that have the
+    configured label, soonest due date first (cards without a due date last,
+    keeping Trello list order as tie-break). Returns [] instead of raising when
+    the list is missing so the main briefing is never blocked.
+    """
+    lists = await get_board_lists(client, cfg)
+    target = next(
+        (
+            lst
+            for lst in lists
+            if lst["name"].casefold() == cfg.backlog_list_name.casefold()
+        ),
+        None,
+    )
+    if target is None:
+        logger.warning(
+            "Backlog list %r not found on board %s — skipping backlog section",
+            cfg.backlog_list_name,
+            cfg.trello_board_id,
+        )
+        return []
+
+    cards = await get_cards_for_list(client, cfg, target["id"], target["name"])
+    label = cfg.backlog_label_name.casefold()
+    matching = [
+        card
+        for card in cards
+        if any(name.casefold() == label for name in card.labels)
+    ]
+    matching.sort(key=lambda card: (card.due is None, card.due or datetime.min))
+    top = matching[: cfg.backlog_top_n]
+    logger.info(
+        "Backlog %s: %d cards, %d with label %r, taking top %d",
+        target["name"],
+        len(cards),
+        len(matching),
+        cfg.backlog_label_name,
+        len(top),
+    )
+    return top
 
 
 async def get_all_tasks(

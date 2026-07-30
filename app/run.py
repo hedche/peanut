@@ -16,7 +16,7 @@ from app.memory import load_memory, save_memory
 from app.planner import plan_today
 from app.scorer import score_tasks
 from app.telegram import send_briefing
-from app.trello import get_all_tasks
+from app.trello import get_all_tasks, get_backlog_priority_cards
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,8 +47,17 @@ async def main() -> None:
         # 5. Fetch email context (optional)
         email_context = await get_email_context(client, settings)
 
+        # 5b. Fetch backlog P1 cards (optional — never blocks the briefing)
+        try:
+            backlog_cards = await get_backlog_priority_cards(client, settings)
+        except Exception as exc:
+            logger.warning("Failed to fetch backlog P1 cards: %s", exc)
+            backlog_cards = []
+
         # 6. Ask the LLM for today's priorities
-        daily_report = await plan_today(top_scored, memory, email_context, settings)
+        daily_report = await plan_today(
+            top_scored, memory, email_context, settings, backlog_cards=backlog_cards
+        )
 
         # 7. Save today's memory for tomorrow
         save_memory(settings.memory_file_path, daily_report)

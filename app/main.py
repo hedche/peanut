@@ -13,11 +13,11 @@ from app.config import settings
 from app.gmail import get_email_context
 from app.memory import load_memory, save_memory
 from app.metrics import metrics
-from app.models import DailyReport
+from app.models import DailyReport, TrelloCard
 from app.planner import plan_today
 from app.scorer import score_tasks
 from app.telegram import send_briefing, send_message, set_webhook
-from app.trello import get_all_tasks
+from app.trello import get_all_tasks, get_backlog_priority_cards
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,6 +26,15 @@ logging.basicConfig(
 # Suppress httpx info logs (they leak credentials in query params)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
+
+
+async def _fetch_backlog_cards(client: httpx.AsyncClient) -> list[TrelloCard]:
+    """Fetch backlog P1 cards without ever blocking the briefing."""
+    try:
+        return await get_backlog_priority_cards(client, settings)
+    except Exception as exc:
+        logger.warning("Failed to fetch backlog P1 cards: %s", exc)
+        return []
 
 
 async def generate_and_send_report() -> None:
@@ -55,8 +64,13 @@ async def generate_and_send_report() -> None:
             # 5. Fetch email context (optional)
             email_context = await get_email_context(client, settings)
 
+            # 5b. Fetch backlog P1 cards (optional — never blocks the briefing)
+            backlog_cards = await _fetch_backlog_cards(client)
+
             # 6. Ask the LLM for today's priorities
-            daily_report = await plan_today(top_scored, memory, email_context, settings)
+            daily_report = await plan_today(
+                top_scored, memory, email_context, settings, backlog_cards=backlog_cards
+            )
 
             # 7. Save today's memory for tomorrow
             save_memory(settings.memory_file_path, daily_report)
@@ -198,9 +212,14 @@ async def report() -> DailyReport:
     # 4. Load yesterday's memory
     memory = load_memory(settings.memory_file_path)
 
+    # 4b. Fetch backlog P1 cards (optional - don't fail if unavailable)
+    backlog_cards = await _fetch_backlog_cards(client)
+
     # 5. Ask the LLM for today's priorities (with email context if available)
     try:
-        daily_report = await plan_today(top_scored, memory, email_context, settings)
+        daily_report = await plan_today(
+            top_scored, memory, email_context, settings, backlog_cards=backlog_cards
+        )
     except Exception as exc:
         logger.exception("Gemini planning failed")
         raise HTTPException(

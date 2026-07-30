@@ -21,6 +21,7 @@ class TrelloCard(BaseModel):
     desc: str = ""
     due: datetime | None = None
     list_name: str = ""
+    labels: list[str] = Field(default_factory=list)
     assigned_to: list[str] = Field(default_factory=list)
     checklist_total: int = 0
     checklist_complete: int = 0
@@ -60,6 +61,7 @@ class DailyReport(BaseModel):
     date: date
     top_priorities: list[PriorityItem]
     priorities_by_assignee: list[AssigneePriorities] = []
+    backlog_p1: list[TrelloCard] = []
     briefing: str = ""
     all_scored_tasks: list[ScoredTask] = []
     email_context: EmailContext | None = None
