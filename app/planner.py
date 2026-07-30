@@ -13,6 +13,7 @@ from app.models import (
     MemoryEntry,
     PriorityItem,
     ScoredTask,
+    TrelloCard,
 )
 from app.prompts import (
     CARRYOVER_BLOCK_TEMPLATE,
@@ -96,12 +97,23 @@ def build_prompt(
     )
 
 
+def _build_backlog_block(backlog_cards: list[TrelloCard]) -> list[str]:
+    lines = ["\n📌 Backlog P1:\n"]
+    for i, card in enumerate(backlog_cards, 1):
+        due_str = (
+            f"due: {card.due.strftime('%Y-%m-%d')}" if card.due else "no due date"
+        )
+        lines.append(f"{i}. {card.name} ({due_str})")
+    return lines
+
+
 def _format_briefing(
     priorities: list[PriorityItem],
     title: str = "Daily priorities",
     provider_name: str = "",
     assignee_priorities: list[AssigneePriorities] | None = None,
     all_scored: list[ScoredTask] | None = None,
+    backlog_cards: list[TrelloCard] | None = None,
 ) -> str:
     scored_lookup: dict[str, ScoredTask] = {}
     if all_scored:
@@ -132,6 +144,9 @@ def _format_briefing(
             lines.append(
                 f"{i}. {p.task}{_score_str(p.task)}"
             )
+
+    if backlog_cards:
+        lines.extend(_build_backlog_block(backlog_cards))
     return "\n".join(lines)
 
 
@@ -162,6 +177,7 @@ async def plan_today(
     email_context: EmailContext | None,
     cfg: Settings,
     today: date | None = None,
+    backlog_cards: list[TrelloCard] | None = None,
 ) -> DailyReport:
     """Run the full planning pipeline: build prompt, call LLM with fallback, format report."""
     if today is None:
@@ -270,6 +286,7 @@ async def plan_today(
         provider_name,
         assignee_priorities or None,
         scored,
+        backlog_cards,
     )
 
     # Log summary
@@ -295,6 +312,7 @@ async def plan_today(
         date=today,
         top_priorities=flat_priorities,
         priorities_by_assignee=assignee_priorities,
+        backlog_p1=backlog_cards or [],
         briefing=briefing,
         all_scored_tasks=scored,
         email_context=email_context,

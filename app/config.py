@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     assistant_name: str = "Peanut"
     briefing_title: str = "Daily priorities"
 
+    # Backlog P1 section in the briefing
+    backlog_list_name: str = "Backlog 📋"
+    backlog_label_name: str = "P1"
+    backlog_top_n: int = 3
+
     # Retry configuration for 503 errors
     gemini_retry_max_attempts: int = 5
     gemini_retry_initial_wait: float = 2.0

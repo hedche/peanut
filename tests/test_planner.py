@@ -165,6 +165,61 @@ class TestPlanToday:
             "Task 5",
         ]
 
+    @pytest.mark.asyncio
+    async def test_backlog_section_included_in_briefing(self):
+        cfg = _settings()
+        scored = [_scored_task("Reply to accountant")]
+        backlog_cards = [
+            TrelloCard(
+                id="b1",
+                name="Fix boiler",
+                due=datetime(2026, 8, 2),
+                labels=["P1"],
+            ),
+            TrelloCard(id="b2", name="Sort loft insulation", labels=["P1"]),
+        ]
+        mock_response = LLMResponse(
+            raw_text='[{"task": "Reply to accountant", "reason": "Tax deadline"}]',
+            parsed_json=[{"task": "Reply to accountant", "reason": "Tax deadline"}],
+        )
+
+        with patch(
+            "app.planner.MultiProviderLLM", autospec=True
+        ) as mock_llm_class:
+            mock_llm = mock_llm_class.return_value
+            mock_llm.generate_with_fallback = AsyncMock(
+                return_value=(mock_response, "gemini", 0)
+            )
+            report = await plan_today(
+                scored, None, None, cfg, today=TODAY, backlog_cards=backlog_cards
+            )
+
+        assert report.backlog_p1 == backlog_cards
+        assert "📌 Backlog P1:" in report.briefing
+        assert "1. Fix boiler (due: 2026-08-02)" in report.briefing
+        assert "2. Sort loft insulation (no due date)" in report.briefing
+
+    @pytest.mark.asyncio
+    async def test_backlog_section_absent_when_no_cards(self):
+        cfg = _settings()
+        scored = [_scored_task("Reply to accountant")]
+        mock_response = LLMResponse(
+            raw_text='[{"task": "Reply to accountant", "reason": "Tax deadline"}]',
+            parsed_json=[{"task": "Reply to accountant", "reason": "Tax deadline"}],
+        )
+
+        with patch(
+            "app.planner.MultiProviderLLM", autospec=True
+        ) as mock_llm_class:
+            mock_llm = mock_llm_class.return_value
+            mock_llm.generate_with_fallback = AsyncMock(
+                return_value=(mock_response, "gemini", 0)
+            )
+            report = await plan_today(scored, None, None, cfg, today=TODAY)
+
+        assert report.backlog_p1 == []
+        assert "Backlog P1" not in report.briefing
+
     async def test_detects_carryover(self):
         cfg = _settings()
         scored = [_scored_task("Reply to accountant")]
