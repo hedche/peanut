@@ -97,8 +97,10 @@ def build_prompt(
     )
 
 
-def _build_backlog_block(backlog_cards: list[TrelloCard]) -> list[str]:
-    lines = ["\n📌 Backlog P1:\n"]
+def _build_backlog_block(
+    backlog_cards: list[TrelloCard], backlog_label: str
+) -> list[str]:
+    lines = [f"\n📌 Backlog {backlog_label}:\n"]
     for i, card in enumerate(backlog_cards, 1):
         due_str = (
             f"due: {card.due.strftime('%Y-%m-%d')}" if card.due else "no due date"
@@ -114,6 +116,7 @@ def _format_briefing(
     assignee_priorities: list[AssigneePriorities] | None = None,
     all_scored: list[ScoredTask] | None = None,
     backlog_cards: list[TrelloCard] | None = None,
+    backlog_label: str = "",
 ) -> str:
     scored_lookup: dict[str, ScoredTask] = {}
     if all_scored:
@@ -146,7 +149,7 @@ def _format_briefing(
             )
 
     if backlog_cards:
-        lines.extend(_build_backlog_block(backlog_cards))
+        lines.extend(_build_backlog_block(backlog_cards, backlog_label))
     return "\n".join(lines)
 
 
@@ -178,6 +181,7 @@ async def plan_today(
     cfg: Settings,
     today: date | None = None,
     backlog_cards: list[TrelloCard] | None = None,
+    backlog_label: str = "",
 ) -> DailyReport:
     """Run the full planning pipeline: build prompt, call LLM with fallback, format report."""
     if today is None:
@@ -287,6 +291,7 @@ async def plan_today(
         assignee_priorities or None,
         scored,
         backlog_cards,
+        backlog_label,
     )
 
     # Log summary
@@ -312,7 +317,8 @@ async def plan_today(
         date=today,
         top_priorities=flat_priorities,
         priorities_by_assignee=assignee_priorities,
-        backlog_p1=backlog_cards or [],
+        backlog_cards=backlog_cards or [],
+        backlog_label=backlog_label if backlog_cards else "",
         briefing=briefing,
         all_scored_tasks=scored,
         email_context=email_context,

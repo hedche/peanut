@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     # Backlog P1 section in the briefing
     backlog_list_name: str = "Backlog 📋"
     backlog_label_name: str = "P1"
+    backlog_fallback_label_name: str = "P2"
     backlog_top_n: int = 3
 
     # Retry configuration for 503 errors
