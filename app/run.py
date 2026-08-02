@@ -72,6 +72,13 @@ async def main() -> None:
         # 8. Send briefing to Telegram
         await send_briefing(daily_report.briefing, settings)
 
+        # 9. Ping the dead-man's-switch so silence gets noticed
+        if settings.healthcheck_ping_url:
+            try:
+                await client.get(settings.healthcheck_ping_url)
+            except Exception as exc:
+                logger.warning("Healthcheck ping failed: %s", exc)
+
         logger.info(
             "Daily briefing complete — %d priorities",
             len(daily_report.top_priorities),

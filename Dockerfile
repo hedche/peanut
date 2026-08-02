@@ -23,6 +23,8 @@ COPY app/ app/
 RUN find /app -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
     find /app -name "*.pyc" -delete 2>/dev/null || true
 
+ARG GIT_SHA=unknown
+ENV APP_VERSION=$GIT_SHA
 ENV PATH="/app/.venv/bin:$PATH"
 
 RUN mkdir -p /data
