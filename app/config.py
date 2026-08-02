@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     # Memory
     memory_file_path: str = "/data/memory.json"
 
+    # Dead-man's-switch ping after a successful daily briefing (e.g. a
+    # healthchecks.io check URL). Empty disables the ping.
+    healthcheck_ping_url: str = ""
+
     # Gmail OAuth2 (read-only)
     gmail_client_id: str = ""
     gmail_client_secret: str = ""
